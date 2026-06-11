@@ -354,7 +354,7 @@ mkdir -p ~/service_robot/src ~/service_robot_ws/src
 
 # 2. Clone this repo
 cd ~/service_robot/src
-git clone https://github.com/YOUR_USERNAME/bookstore_turtlebot_nav_gcs.git service_robot_mission
+git clone https://github.com/alprNer/bookstore_turtlebot_nav_gcs.git service_robot_mission
 
 # 3. Clone AWS Bookstore World
 cd ~/service_robot_ws/src
