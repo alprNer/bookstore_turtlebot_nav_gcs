@@ -1,0 +1,21 @@
+<launch>
+  <!-- rosbridge: tarayıcı ↔ ROS WebSocket köprüsü (ws://localhost:9090) -->
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+    <arg name="port" value="9090"/>
+  </include>
+
+  <!-- web_video_server: kamera MJPEG akışı (http://localhost:8080) -->
+  <node pkg="web_video_server" type="web_video_server" name="web_video_server"
+        output="screen">
+    <param name="port"    value="8080"/>
+    <param name="quality" value="70"/>
+  </node>
+
+  <!-- GCS HTTP sunucusu: index.html'i tarayıcıya sunar (http://localhost:8888) -->
+  <node pkg="service_robot_mission" type="serve_gcs.py"
+        name="gcs_server" output="screen"/>
+
+  <!-- Harita kaydetme node'u -->
+  <node pkg="service_robot_mission" type="map_saver_node.py"
+        name="map_saver_node" output="screen"/>
+</launch>

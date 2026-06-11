@@ -1,0 +1,23 @@
+<launch>
+  <arg name="model" default="waffle_pi"/>
+
+  <!-- QR modelleri için Gazebo'nun model arama yolunu ayarla -->
+  <env name="GAZEBO_MODEL_PATH"
+       value="$(find service_robot_mission)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+
+  <!-- Gazebo: QR kodların eklendiği dünya -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="/home/alprn/service_robot_ws/src/aws-robomaker-bookstore-world/worlds/qradded.world"/>
+    <arg name="paused"     value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui"        value="true"/>
+    <arg name="headless"   value="false"/>
+    <arg name="debug"      value="false"/>
+  </include>
+
+  <!-- Robot tanımı (RViz ve TF için gerekli) -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro --inorder
+                  $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
+
+</launch>

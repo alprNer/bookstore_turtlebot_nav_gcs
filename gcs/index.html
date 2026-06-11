@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RACLAB — Yer Kontrol İstasyonu</title>
+  <script src="roslib.min.js"></script>
+  <style>
+    :root {
+      --bg:       #060b14;
+      --card:     #0c1420;
+      --card2:    #111c2e;
+      --border:   #1a2d47;
+      --accent:   #3b82f6;
+      --accent2:  #60a5fa;
+      --success:  #22c55e;
+      --warn:     #f59e0b;
+      --danger:   #ef4444;
+      --text:     #e2e8f0;
+      --dim:      #4a6080;
+      --font:     'Segoe UI', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Animasyonlar ── */
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(59,130,246,.6); }
+      70%  { box-shadow: 0 0 0 7px rgba(59,130,246,0); }
+      100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+    }
+    @keyframes pulse-green {
+      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
+      70%  { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+    @keyframes scan-line {
+      0%   { top: 0%; opacity: 1; }
+      90%  { top: 100%; opacity: .6; }
+      100% { top: 100%; opacity: 0; }
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+    @keyframes header-glow {
+      0%, 100% { text-shadow: 0 0 8px rgba(96,165,250,.4); }
+      50%       { text-shadow: 0 0 20px rgba(96,165,250,.9); }
+    }
+    @keyframes border-flow {
+      0%   { border-color: var(--accent); box-shadow: 0 0 8px rgba(59,130,246,.3); }
+      50%  { border-color: #818cf8;       box-shadow: 0 0 14px rgba(129,140,248,.5); }
+      100% { border-color: var(--accent); box-shadow: 0 0 8px rgba(59,130,246,.3); }
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(.92) translateY(20px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0); }
+    }
+    @keyframes overlay-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes grid-move {
+      from { background-position: 0 0; }
+      to   { background-position: 40px 40px; }
+    }
+    @keyframes spin-icon {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes success-pop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.25); }
+      100% { transform: scale(1); }
+    }
+    @keyframes spin-loader {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes save-success {
+      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.7); }
+      70%  { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+
+    /* ── Body & animated grid background ── */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 58px 1fr;
+      overflow: hidden;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(59,130,246,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: grid-move 8s linear infinite;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative; z-index: 10;
+      background: linear-gradient(90deg, #0c1420 0%, #0e1829 50%, #0c1420 100%);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 14px;
+    }
+    header::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: .5;
+    }
+
+    .logo-icon {
+      width: 32px; height: 32px;
+      border: 1.5px solid var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(59,130,246,.08);
+      flex-shrink: 0;
+    }
+    .logo-icon svg { animation: spin-icon 12s linear infinite; }
+
+    .header-title { display: flex; flex-direction: column; gap: 1px; }
+    .header-title .brand {
+      font-size: 15px; font-weight: 800; letter-spacing: .12em;
+      color: var(--accent2);
+      animation: header-glow 3s ease-in-out infinite;
+    }
+    .header-title .sub {
+      font-size: 10px; color: var(--dim); letter-spacing: .06em;
+    }
+
+    .header-divider {
+      width: 1px; height: 28px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .header-author {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .header-author .name {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      letter-spacing: .04em;
+    }
+    .header-author .role {
+      font-size: 10px; color: var(--dim);
+    }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+
+    .conn-badge { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 6px var(--danger);
+      transition: all .4s;
+    }
+    .dot.ok   { background: var(--success); box-shadow: 0 0 8px var(--success); animation: blink-dot 2s ease-in-out infinite; }
+    .dot.warn { background: var(--warn);    box-shadow: 0 0 8px var(--warn); }
+
+    .pose-display { font-size: 11px; color: var(--dim); font-family: monospace; }
+    .pose-display span { color: var(--accent2); }
+
+    /* ── Ana ızgara ── */
+    main {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      overflow: hidden;
+    }
+
+    /* ── Kamera paneli ── */
+    .camera-panel {
+      background: #000;
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+    .panel-title {
+      background: var(--card);
+      padding: 7px 14px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      background: var(--accent);
+      color: #fff; font-size: 9px;
+      padding: 1px 7px; border-radius: 10px;
+      font-weight: 700; letter-spacing: .06em;
+    }
+
+    /* QR scanning animasyonu — kamera üzerinde */
+    .scan-overlay {
+      display: none;
+      position: absolute; inset: 32px 0 0 0;
+      pointer-events: none; overflow: hidden;
+    }
+    .scan-overlay.active { display: block; }
+    .scan-overlay::before {
+      content: '';
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+      animation: scan-line 1.8s linear infinite;
+      box-shadow: 0 0 10px var(--accent2);
+    }
+    .scan-overlay::after {
+      content: 'QR TARANIYOR';
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 13px; font-weight: 800;
+      letter-spacing: .15em;
+      color: var(--accent2);
+      text-shadow: 0 0 20px var(--accent2);
+      animation: blink-dot 1s ease-in-out infinite;
+    }
+
+    #cam-wrap {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--dim); font-size: 13px; gap: 8px;
+    }
+    #cam-wrap svg { opacity: .2; }
+
+    /* ── Sağ panel ── */
+    .right-panel {
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      overflow: hidden;
+    }
+
+    /* ── Hız kontrol ── */
+    .controls {
+      background: var(--card);
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ctrl-group { margin-bottom: 13px; }
+    .ctrl-group:last-child { margin-bottom: 0; }
+    .ctrl-label {
+      display: flex; justify-content: space-between;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 7px;
+    }
+    .ctrl-label .val { font-family: monospace; font-size: 13px; color: var(--accent2); font-weight: 700; }
+
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; height: 5px;
+      border-radius: 3px; outline: none; cursor: pointer;
+    }
+    input[type=range].linear  { background: linear-gradient(to right, #ef4444 0%, #1e2d45 50%, #22c55e 100%); }
+    input[type=range].angular { background: linear-gradient(to right, #f59e0b 0%, #1e2d45 50%, #f59e0b 100%); }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent2); border: 2px solid #fff;
+      box-shadow: 0 0 8px rgba(96,165,250,.6);
+      transition: transform .1s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+    .speed-display { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+    .speed-card {
+      background: var(--card2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; text-align: center;
+      transition: border-color .3s;
+    }
+    .speed-card.active { border-color: var(--accent); }
+    .speed-card .sc-label { font-size: 9px; color: var(--dim); margin-bottom: 3px; letter-spacing: .06em; text-transform: uppercase; }
+    .speed-card .sc-val { font-size: 20px; font-weight: 700; font-family: monospace; color: var(--accent2); }
+    .speed-card .sc-unit { font-size: 9px; color: var(--dim); }
+
+    .btn-row { display: flex; gap: 7px; margin-top: 10px; }
+    .btn {
+      flex: 1; padding: 8px; border: none; border-radius: 7px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      letter-spacing: .04em; transition: opacity .15s, transform .1s, box-shadow .2s;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn-stop  { background: var(--danger); color: #fff; }
+    .btn-stop:hover { box-shadow: 0 0 14px rgba(239,68,68,.5); }
+    .btn-secondary {
+      background: var(--card2); color: var(--dim);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Görev Başlat ── */
+    .mission-start-wrap {
+      background: var(--card); padding: 10px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    #btn-mission {
+      width: 100%; padding: 10px; font-size: 13px; font-weight: 800;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: #fff; border-radius: 8px; letter-spacing: .08em;
+      border: 1px solid rgba(34,197,94,.3);
+      box-shadow: 0 0 16px rgba(34,197,94,.2);
+      transition: all .25s;
+      cursor: pointer;
+    }
+    #btn-mission:hover:not(:disabled) {
+      box-shadow: 0 0 28px rgba(34,197,94,.5);
+      transform: translateY(-1px);
+    }
+    #btn-mission:disabled { background: var(--card2); color: var(--dim); box-shadow: none; cursor: default; }
+
+    /* ── Harita kaydet butonu ── */
+    #btn-save-map {
+      width: 100%; padding: 9px; font-size: 12px; font-weight: 700;
+      background: linear-gradient(135deg, #1d4ed8, #1e40af);
+      color: #fff; border-radius: 8px; letter-spacing: .06em;
+      border: 1px solid rgba(96,165,250,.3);
+      box-shadow: 0 0 12px rgba(59,130,246,.15);
+      transition: all .25s; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    #btn-save-map:hover:not(:disabled) {
+      box-shadow: 0 0 22px rgba(59,130,246,.5);
+      transform: translateY(-1px);
+    }
+    #btn-save-map:disabled { background: var(--card2); color: var(--dim); box-shadow: none; cursor: default; }
+    #btn-save-map.saving  { background: linear-gradient(135deg, #92400e, #78350f); border-color: rgba(245,158,11,.3); }
+    #btn-save-map.saved   { background: linear-gradient(135deg, #166534, #14532d); border-color: rgba(34,197,94,.4); animation: save-success .6s ease-out; }
+    #btn-save-map.error   { background: linear-gradient(135deg, #7f1d1d, #6b1c1c); border-color: rgba(239,68,68,.4); }
+
+    .spin-ring {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      animation: spin-loader .7s linear infinite;
+      display: none;
+    }
+    #btn-save-map.saving .spin-ring { display: block; }
+
+    /* ── Görev durumu ── */
+    .mission-panel {
+      background: var(--card); padding: 10px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .mission-title {
+      font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--dim); margin-bottom: 9px;
+    }
+    .task-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+
+    .task-item {
+      background: var(--card2); border: 1px solid var(--border);
+      border-radius: 7px; padding: 7px 9px;
+      display: flex; align-items: center; gap: 7px;
+      font-size: 10px; transition: all .4s;
+      position: relative; overflow: hidden;
+    }
+    .task-item::before {
+      content: ''; position: absolute; inset: 0;
+      background: transparent; transition: background .4s;
+      pointer-events: none;
+    }
+    .task-item.active  { border-color: var(--accent);  animation: border-flow 2s ease-in-out infinite; }
+    .task-item.success { border-color: var(--success); background: rgba(34,197,94,.06); }
+    .task-item.fail    { border-color: var(--danger);  background: rgba(239,68,68,.06); }
+    .task-item.skipped { border-color: var(--warn);    background: rgba(245,158,11,.06); }
+
+    .task-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0; transition: all .3s;
+    }
+    .task-item.active  .task-dot { background: var(--accent);  animation: pulse-ring 1.2s ease-out infinite; }
+    .task-item.success .task-dot { background: var(--success); animation: pulse-green .3s ease-out; }
+    .task-item.fail    .task-dot { background: var(--danger); }
+    .task-item.skipped .task-dot { background: var(--warn); }
+
+    .task-name { flex: 1; color: var(--text); font-weight: 600; }
+    .task-status-text { font-size: 9px; color: var(--dim); white-space: nowrap; }
+
+    /* ── Log paneli ── */
+    .log-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    .log-inner {
+      flex: 1; overflow-y: auto;
+      padding: 7px 11px;
+      font-family: 'Courier New', monospace;
+      font-size: 10.5px; line-height: 1.65;
+    }
+    .log-inner::-webkit-scrollbar { width: 3px; }
+    .log-inner::-webkit-scrollbar-track { background: transparent; }
+    .log-inner::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-entry {
+      display: flex; gap: 7px; padding: 1px 0;
+      animation: fade-up .2s ease-out;
+    }
+    .log-time  { color: var(--dim); flex-shrink: 0; }
+    .log-level { flex-shrink: 0; font-weight: 700; min-width: 38px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info  .log-level { color: var(--accent2); }
+    .log-warn  .log-level { color: var(--warn); }
+    .log-error .log-level { color: var(--danger); }
+    .log-ok    .log-level { color: var(--success); }
+
+    .log-footer {
+      padding: 5px 11px; background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .log-count { font-size: 10px; color: var(--dim); }
+    .btn-clear {
+      font-size: 10px; padding: 2px 9px;
+      border-radius: 4px; border: 1px solid var(--border);
+      background: transparent; color: var(--dim); cursor: pointer;
+    }
+    .btn-clear:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Rapor Modal ── */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,.75);
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+      animation: overlay-in .3s ease-out;
+    }
+    #modal-overlay.show { display: flex; }
+
+    #modal-box {
+      background: linear-gradient(135deg, #0c1a2e, #0f2040);
+      border: 1px solid var(--accent);
+      border-radius: 16px;
+      width: min(680px, 92vw);
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 0 60px rgba(59,130,246,.3);
+      animation: modal-in .35s cubic-bezier(.34,1.56,.64,1);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .modal-header .trophy { font-size: 28px; }
+    .modal-header h2 { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: .06em; }
+    .modal-header p  { font-size: 11px; color: var(--dim); margin-top: 2px; }
+    .modal-close {
+      margin-left: auto; background: transparent; border: 1px solid var(--border);
+      color: var(--dim); border-radius: 6px; width: 30px; height: 30px;
+      cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+    }
+    .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+
+    .modal-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: var(--border);
+    }
+    .stat-cell {
+      background: var(--card2); padding: 14px; text-align: center;
+    }
+    .stat-cell .sv { font-size: 28px; font-weight: 800; font-family: monospace; }
+    .stat-cell .sl { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
+    .sv.green { color: var(--success); }
+    .sv.red   { color: var(--danger); }
+    .sv.blue  { color: var(--accent2); }
+
+    .modal-body {
+      flex: 1; overflow-y: auto; padding: 16px 22px;
+    }
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .report-pre {
+      font-family: 'Courier New', monospace;
+      font-size: 12px; line-height: 1.8;
+      color: var(--text); white-space: pre;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 16px;
+    }
+
+    .modal-footer {
+      padding: 12px 22px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .modal-btn {
+      padding: 8px 20px; border-radius: 7px;
+      font-size: 12px; font-weight: 700; cursor: pointer; border: none;
+      letter-spacing: .04em; transition: all .2s;
+    }
+    .modal-btn-primary {
+      background: var(--accent); color: #fff;
+    }
+    .modal-btn-primary:hover { box-shadow: 0 0 14px rgba(59,130,246,.5); }
+    .modal-btn-secondary {
+      background: var(--card2); color: var(--dim);
+      border: 1px solid var(--border);
+    }
+    .modal-btn-secondary:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo-icon">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+      <circle cx="12" cy="12" r="3"/>
+      <circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/>
+    </svg>
+  </div>
+
+  <div class="header-title">
+    <div class="brand">RACLAB</div>
+    <div class="sub">Yer Kontrol İstasyonu</div>
+  </div>
+
+  <div class="header-divider"></div>
+
+  <div class="header-author">
+    <div class="name">Alperen ER</div>
+    <div class="role">Servis Robotu Projesi</div>
+  </div>
+
+  <div class="header-right">
+    <div class="pose-display">
+      x:<span id="pos-x">--.--</span>
+      y:<span id="pos-y">--.--</span>
+      θ:<span id="pos-yaw">---</span>°
+    </div>
+    <div class="conn-badge">
+      <div class="dot" id="ros-dot"></div>
+      <span id="ros-label">Bağlanıyor…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ══ ANA ALAN ══ -->
+<main>
+
+  <!-- Kamera -->
+  <div class="camera-panel">
+    <div class="panel-title">
+      📷 Kamera Görüntüsü
+      <span class="badge" id="cam-badge">MJPEG</span>
+    </div>
+    <div class="scan-overlay" id="scan-overlay"></div>
+    <div id="cam-wrap">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <rect x="2" y="6" width="20" height="14" rx="2"/>
+        <circle cx="12" cy="13" r="3"/>
+        <path d="M8 6V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1"/>
+      </svg>
+      <span>Kamera yükleniyor…</span>
+      <span style="font-size:10px;color:#1e3a5f">web_video_server bekleniyor</span>
+    </div>
+  </div>
+
+  <!-- Sağ panel -->
+  <div class="right-panel">
+
+    <!-- Hız kontrol -->
+    <div class="controls">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">
+        🎮 &nbsp;Hız Kontrol
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">
+          <span>İleri / Geri</span>
+          <span class="val" id="lin-val">0.00</span>
+        </div>
+        <input type="range" id="linear-slider" class="linear" min="-0.5" max="0.5" step="0.01" value="0"/>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">
+          <span>Sol / Sağ</span>
+          <span class="val" id="ang-val">0.00</span>
+        </div>
+        <input type="range" id="angular-slider" class="angular" min="-1.5" max="1.5" step="0.01" value="0"/>
+      </div>
+      <div class="speed-display">
+        <div class="speed-card" id="sc-lin-card">
+          <div class="sc-label">Linear</div>
+          <div class="sc-val" id="sc-lin">0.00</div>
+          <div class="sc-unit">m/s</div>
+        </div>
+        <div class="speed-card" id="sc-ang-card">
+          <div class="sc-label">Angular</div>
+          <div class="sc-val" id="sc-ang">0.00</div>
+          <div class="sc-unit">rad/s</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-stop" id="btn-estop">⛔ ACİL DUR</button>
+        <button class="btn btn-secondary" id="btn-zero">Sıfırla</button>
+      </div>
+    </div>
+
+    <!-- Görev Başlat + Harita Kaydet -->
+    <div class="mission-start-wrap" style="display:flex;flex-direction:column;gap:7px">
+      <button id="btn-mission">🚀 &nbsp;GÖREV BAŞLAT</button>
+      <button id="btn-save-map">
+        <span class="spin-ring"></span>
+        <span id="save-map-label">🗺️ &nbsp;HARİTAYI KAYDET</span>
+      </button>
+    </div>
+
+    <!-- Görev durumu -->
+    <div class="mission-panel">
+      <div class="mission-title">📋 &nbsp;Görev Durumu</div>
+      <div class="task-grid">
+        <div class="task-item" id="task-DANISMA">
+          <div class="task-dot"></div>
+          <div class="task-name">DANIŞMA</div>
+          <div class="task-status-text" id="ts-DANISMA">Bekliyor</div>
+        </div>
+        <div class="task-item" id="task-OKUMA">
+          <div class="task-dot"></div>
+          <div class="task-name">OKUMA</div>
+          <div class="task-status-text" id="ts-OKUMA">Bekliyor</div>
+        </div>
+        <div class="task-item" id="task-ROMAN">
+          <div class="task-dot"></div>
+          <div class="task-name">ROMAN</div>
+          <div class="task-status-text" id="ts-ROMAN">Bekliyor</div>
+        </div>
+        <div class="task-item" id="task-TEKNOLOJI">
+          <div class="task-dot"></div>
+          <div class="task-name">TEKNOLOJİ</div>
+          <div class="task-status-text" id="ts-TEKNOLOJI">Bekliyor</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-panel">
+      <div class="panel-title">🖥️ &nbsp;Görev Logu</div>
+      <div class="log-inner" id="log-inner"></div>
+      <div class="log-footer">
+        <span class="log-count" id="log-count">0 mesaj</span>
+        <button class="btn-clear" id="btn-clear">Temizle</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ══ RAPOR MODALI ══ -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div class="modal-header">
+      <div class="trophy">🏆</div>
+      <div>
+        <h2>GÖREV TAMAMLANDI</h2>
+        <p id="modal-subtitle">Tüm noktalar ziyaret edildi.</p>
+      </div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-stats" id="modal-stats">
+      <div class="stat-cell"><div class="sv green" id="stat-ok">-</div><div class="sl">Başarılı</div></div>
+      <div class="stat-cell"><div class="sv red"   id="stat-fail">-</div><div class="sl">Başarısız</div></div>
+      <div class="stat-cell"><div class="sv blue"  id="stat-time">-</div><div class="sl">Toplam Süre</div></div>
+    </div>
+    <div class="modal-body">
+      <pre class="report-pre" id="modal-report">Rapor yükleniyor…</pre>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-secondary" id="modal-close2">Kapat</button>
+      <button class="modal-btn modal-btn-primary" id="modal-copy">📋 Kopyala</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────────
+//  Log yardımcısı
+// ────────────────────────────────────────────────
+let logCount = 0, lastLogKey = '';
+
+function addLog(msg, level = 'info') {
+  const key = level + '|' + msg;
+  if (key === lastLogKey) return;
+  lastLogKey = key;
+
+  const el  = document.getElementById('log-inner');
+  const ts  = new Date().toTimeString().slice(0, 8);
+  const div = document.createElement('div');
+  div.className = `log-entry log-${level}`;
+  const labels = { info:'INFO', warn:'WARN', error:'ERR ', ok:'OK  ' };
+  div.innerHTML =
+    `<span class="log-time">${ts}</span>` +
+    `<span class="log-level">${labels[level]||'INFO'}</span>` +
+    `<span class="log-msg">${msg}</span>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  logCount++;
+  document.getElementById('log-count').textContent = logCount + ' mesaj';
+}
+
+// ────────────────────────────────────────────────
+//  Görev kartı güncelleme
+// ────────────────────────────────────────────────
+function setTaskStatus(name, status) {
+  const item = document.getElementById('task-' + name);
+  const txt  = document.getElementById('ts-'   + name);
+  if (!item) return;
+  item.className = 'task-item';
+  const map = {
+    'GIDILIYOR': ['active',  'Gidiliyor…'],
+    'QR':        ['active',  'QR taranıyor'],
+    'SUCCESS':   ['success', '✓ Başarılı'],
+    'FAIL':      ['fail',    '✗ Başarısız'],
+    'SKIPPED':   ['skipped', '⊘ Atlandı'],
+  };
+  const [cls, label] = map[status] || ['', status];
+  if (cls) item.classList.add(cls);
+  txt.textContent = label || status;
+
+  // QR tarama animasyonu
+  const overlay = document.getElementById('scan-overlay');
+  if (status === 'QR') overlay.classList.add('active');
+  else overlay.classList.remove('active');
+}
+
+// ────────────────────────────────────────────────
+//  Rapor modali
+// ────────────────────────────────────────────────
+function showReport(reportText, msgText) {
+  // Özet istatistikleri çek
+  const okMatch   = msgText.match(/(\d+)\/\d+ başarılı/);
+  const failMatch = msgText.match(/Süre: (.+)/);
+
+  const parts   = msgText.match(/(\d+)\/(\d+) başarılı/);
+  const ok      = parts ? parts[1] : '?';
+  const total   = parts ? parts[2] : '?';
+  const fail    = parts ? (parseInt(parts[2]) - parseInt(parts[1])) : '?';
+  const timeStr = msgText.match(/Süre: ([^\s,|]+(?:\s+\S+)?)/)?.[1] || '--';
+
+  document.getElementById('stat-ok').textContent   = ok;
+  document.getElementById('stat-fail').textContent = fail;
+  document.getElementById('stat-time').textContent = timeStr;
+  document.getElementById('modal-subtitle').textContent =
+    `${ok}/${total} nokta başarıyla tamamlandı`;
+  document.getElementById('modal-report').textContent = reportText || '(rapor yok)';
+
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('show');
+}
+
+document.getElementById('modal-close').addEventListener('click',  () => document.getElementById('modal-overlay').classList.remove('show'));
+document.getElementById('modal-close2').addEventListener('click', () => document.getElementById('modal-overlay').classList.remove('show'));
+document.getElementById('modal-copy').addEventListener('click', () => {
+  const text = document.getElementById('modal-report').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('modal-copy');
+    btn.textContent = '✅ Kopyalandı';
+    setTimeout(() => btn.textContent = '📋 Kopyala', 2000);
+  });
+});
+
+// ────────────────────────────────────────────────
+//  Kamera
+// ────────────────────────────────────────────────
+(function initCamera() {
+  const wrap = document.getElementById('cam-wrap');
+  const img  = document.createElement('img');
+  img.src = 'http://localhost:8080/stream?topic=/camera/rgb/image_raw&type=mjpeg&quality=70';
+  img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:none;';
+  img.onload = () => {
+    wrap.innerHTML = '';
+    wrap.style.cssText = 'flex:1;overflow:hidden;background:#000;position:relative;';
+    wrap.appendChild(img);
+    img.style.display = 'block';
+    addLog('Kamera akışı başladı', 'ok');
+  };
+  img.onerror = () => addLog('web_video_server bulunamadı (8080)', 'warn');
+  wrap.appendChild(img);
+})();
+
+// ────────────────────────────────────────────────
+//  ROS bağlantısı
+// ────────────────────────────────────────────────
+const ros = new ROSLIB.Ros({ url: 'ws://localhost:9090' });
+ros.on('connection', () => {
+  document.getElementById('ros-dot').className = 'dot ok';
+  document.getElementById('ros-label').textContent = 'Bağlı';
+  addLog('ROS bağlandı', 'ok');
+  initPublishers();
+  initSubscribers();
+});
+ros.on('error', () => {
+  document.getElementById('ros-dot').className = 'dot';
+  document.getElementById('ros-label').textContent = 'Hata';
+  addLog('ROS bağlantı hatası', 'error');
+});
+ros.on('close', () => {
+  document.getElementById('ros-dot').className = 'dot warn';
+  document.getElementById('ros-label').textContent = 'Kesildi';
+  addLog('ROS bağlantısı kapandı', 'warn');
+});
+
+// ────────────────────────────────────────────────
+//  Publisher / Subscriber
+// ────────────────────────────────────────────────
+let cmdVelPub = null, missionStartPub = null, saveMapPub = null, missionStarted = false;
+
+function initPublishers() {
+  cmdVelPub = new ROSLIB.Topic({ ros, name: '/cmd_vel', messageType: 'geometry_msgs/Twist' });
+  missionStartPub = new ROSLIB.Topic({ ros, name: '/mission/start', messageType: 'std_msgs/String' });
+  saveMapPub = new ROSLIB.Topic({ ros, name: '/gcs/save_map', messageType: 'std_msgs/String' });
+}
+
+function initSubscribers() {
+  // AMCL pose
+  new ROSLIB.Topic({
+    ros, name: '/amcl_pose',
+    messageType: 'geometry_msgs/PoseWithCovarianceStamped',
+    throttle_rate: 300,
+  }).subscribe(msg => {
+    const p = msg.pose.pose.position, q = msg.pose.pose.orientation;
+    const yaw = Math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z));
+    document.getElementById('pos-x').textContent   = p.x.toFixed(2);
+    document.getElementById('pos-y').textContent   = p.y.toFixed(2);
+    document.getElementById('pos-yaw').textContent = (yaw*180/Math.PI).toFixed(0);
+  });
+
+  // Task manager status
+  new ROSLIB.Topic({
+    ros, name: '/task_manager/status',
+    messageType: 'std_msgs/String',
+  }).subscribe(msg => {
+    try {
+      const d = JSON.parse(msg.data);
+      if (d.location && d.state) {
+        setTaskStatus(d.location, d.state);
+        const icons = { GIDILIYOR:'→', QR:'🔍', SUCCESS:'✓', FAIL:'✗', SKIPPED:'⊘' };
+        addLog(`${icons[d.state]||''} ${d.location}: ${d.state}`,
+          d.state==='SUCCESS'?'ok': d.state==='FAIL'?'error': d.state==='SKIPPED'?'warn':'info');
+      }
+      if (d.msg) addLog(d.msg, d.level || 'info');
+      if (d.report) showReport(d.report, d.msg || '');
+    } catch(_) { addLog(msg.data, 'info'); }
+  });
+
+  // Harita kayıt sonucu
+  new ROSLIB.Topic({
+    ros, name: '/gcs/save_map_result',
+    messageType: 'std_msgs/String',
+  }).subscribe(msg => {
+    const btn   = document.getElementById('btn-save-map');
+    const label = document.getElementById('save-map-label');
+    if (msg.data === 'ok') {
+      btn.className = 'saved';
+      label.textContent = '✅  Harita Kaydedildi!';
+      addLog('Harita başarıyla kaydedildi → maps/map.pgm + map.yaml', 'ok');
+      setTimeout(() => {
+        btn.className = '';
+        btn.disabled  = false;
+        label.textContent = '🗺️  HARİTAYI KAYDET';
+      }, 3000);
+    } else {
+      btn.className = 'error';
+      label.textContent = '✗  Kayıt Başarısız';
+      addLog('Harita kaydedilemedi: ' + msg.data, 'error');
+      setTimeout(() => {
+        btn.className = '';
+        btn.disabled  = false;
+        label.textContent = '🗺️  HARİTAYI KAYDET';
+      }, 3000);
+    }
+  });
+
+  // rosout_agg
+  new ROSLIB.Topic({
+    ros, name: '/rosout_agg',
+    messageType: 'rosgraph_msgs/Log',
+    throttle_rate: 150,
+  }).subscribe(msg => {
+    if (!msg.name.includes('task_manager') && !msg.name.includes('qr_reader')) return;
+    const lvl = {1:'info',2:'info',4:'warn',8:'error',16:'error'}[msg.level]||'info';
+    addLog(`[${msg.name.split('/').pop()}] ${msg.msg}`, lvl);
+  });
+}
+
+// ────────────────────────────────────────────────
+//  Hız kontrol
+// ────────────────────────────────────────────────
+const linearSlider  = document.getElementById('linear-slider');
+const angularSlider = document.getElementById('angular-slider');
+
+function publishVel() {
+  if (!cmdVelPub) return;
+  const lin = parseFloat(linearSlider.value);
+  const ang = parseFloat(angularSlider.value);
+  cmdVelPub.publish(new ROSLIB.Message({
+    linear: { x: lin, y: 0, z: 0 },
+    angular: { x: 0, y: 0, z: -ang },
+  }));
+  document.getElementById('lin-val').textContent = lin.toFixed(2);
+  document.getElementById('ang-val').textContent = ang.toFixed(2);
+  document.getElementById('sc-lin').textContent  = lin.toFixed(2);
+  document.getElementById('sc-ang').textContent  = ang.toFixed(2);
+  document.getElementById('sc-lin-card').classList.toggle('active', lin !== 0);
+  document.getElementById('sc-ang-card').classList.toggle('active', ang !== 0);
+}
+
+linearSlider.addEventListener('input', publishVel);
+angularSlider.addEventListener('input', publishVel);
+setInterval(publishVel, 200);
+
+// Klavye
+const keyState = {};
+document.addEventListener('keydown', e => {
+  if (['w','a','s','d',' '].includes(e.key.toLowerCase())) {
+    e.preventDefault(); keyState[e.key.toLowerCase()] = true; applyKeys();
+  }
+});
+document.addEventListener('keyup', e => { keyState[e.key.toLowerCase()] = false; applyKeys(); });
+function applyKeys() {
+  let lin = 0, ang = 0;
+  if (keyState['w']) lin =  0.3;
+  if (keyState['s']) lin = -0.3;
+  if (keyState['a']) ang =  0.8;
+  if (keyState['d']) ang = -0.8;
+  if (keyState[' ']) { lin = 0; ang = 0; }
+  linearSlider.value = lin; angularSlider.value = ang; publishVel();
+}
+
+document.getElementById('btn-estop').addEventListener('click', () => {
+  linearSlider.value = 0; angularSlider.value = 0; publishVel();
+  addLog('ACİL DUR! Hız sıfırlandı.', 'error');
+});
+document.getElementById('btn-zero').addEventListener('click', () => {
+  linearSlider.value = 0; angularSlider.value = 0; publishVel();
+});
+
+// Görev Başlat
+document.getElementById('btn-mission').addEventListener('click', () => {
+  if (!missionStartPub) { addLog('ROS bağlantısı yok!', 'error'); return; }
+  if (missionStarted)   { addLog('Görev zaten başlatıldı.', 'warn'); return; }
+  missionStartPub.publish(new ROSLIB.Message({ data: 'start' }));
+  missionStarted = true;
+  const btn = document.getElementById('btn-mission');
+  btn.textContent = '✅  Görev Başlatıldı';
+  btn.disabled = true;
+  addLog('Görev başlatma sinyali gönderildi', 'ok');
+});
+
+// Haritayı Kaydet butonu
+document.getElementById('btn-save-map').addEventListener('click', () => {
+  if (!saveMapPub) { addLog('ROS bağlantısı yok!', 'error'); return; }
+  const btn   = document.getElementById('btn-save-map');
+  const label = document.getElementById('save-map-label');
+  btn.className = 'saving';
+  btn.disabled  = true;
+  label.textContent = 'Kaydediliyor…';
+  saveMapPub.publish(new ROSLIB.Message({ data: 'save' }));
+  addLog('Harita kayıt isteği gönderildi…', 'info');
+});
+
+// Log temizle
+document.getElementById('btn-clear').addEventListener('click', () => {
+  document.getElementById('log-inner').innerHTML = '';
+  logCount = 0; lastLogKey = '';
+  document.getElementById('log-count').textContent = '0 mesaj';
+});
+
+addLog('RACLAB GCS hazır — ROS bekleniyor…', 'info');
+addLog('Klavye: W/A/S/D hareket | SPACE dur', 'info');
+</script>
+</body>
+</html>

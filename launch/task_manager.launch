@@ -1,0 +1,12 @@
+<launch>
+  <!-- QR Okuyucu Node -->
+  <node pkg="service_robot_mission" type="qr_reader.py"
+        name="qr_reader" output="screen"/>
+
+  <!-- Görev Yöneticisi Node -->
+  <node pkg="service_robot_mission" type="task_manager.py"
+        name="task_manager" output="screen">
+    <param name="mission_file"
+           value="$(find service_robot_mission)/config/mission.yaml"/>
+  </node>
+</launch>

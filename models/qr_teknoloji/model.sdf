@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="qr_teknoloji">
+    <static>true</static>
+    <link name="link">
+      <collision name="col">
+        <geometry><box><size>0.003 0.28 0.28</size></box></geometry>
+      </collision>
+      <visual name="vis">
+        <geometry><box><size>0.003 0.28 0.28</size></box></geometry>
+        <material>
+          <script>
+            <uri>model://qr_teknoloji/materials/scripts</uri>
+            <uri>model://qr_teknoloji/materials/textures</uri>
+            <name>QR_TEKNOLOJI</name>
+          </script>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

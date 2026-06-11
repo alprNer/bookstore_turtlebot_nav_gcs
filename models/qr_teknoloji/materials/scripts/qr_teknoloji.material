@@ -1,0 +1,16 @@
+material QR_TEKNOLOJI
+{
+  technique
+  {
+    pass
+    {
+      ambient 1 1 1 1
+      diffuse 1 1 1 1
+      texture_unit
+      {
+        texture qr_teknoloji.png
+        filtering none
+      }
+    }
+  }
+}

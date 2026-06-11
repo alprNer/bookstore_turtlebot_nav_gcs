@@ -1,0 +1,44 @@
+<launch>
+  <arg name="model"            default="waffle_pi"/>
+  <arg name="map_file"         default="$(find service_robot_mission)/maps/map.yaml"/>
+  <arg name="open_rviz"        default="true"/>
+  <arg name="move_forward_only" default="false"/>
+
+  <!--TF ağacı -->
+  <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
+    <arg name="model" value="$(arg model)"/>
+  </include>
+
+  <!--haritayı yükle -->
+  <node pkg="map_server" name="map_server" type="map_server"
+        args="$(arg map_file)" output="screen"/>
+
+  <!-- AMCL -->
+  <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
+
+  <!-- move_base: global + lokal planlama -->
+  <include file="$(find turtlebot3_navigation)/launch/move_base.launch">
+    <arg name="model"            value="$(arg model)"/>
+    <arg name="move_forward_only" value="$(arg move_forward_only)"/>
+  </include>
+
+  <!-- tolerans-->
+  <param name="move_base/DWAPlannerROS/xy_goal_tolerance"  value="0.30"/>
+  <param name="move_base/DWAPlannerROS/yaw_goal_tolerance" value="0.5"/>
+  <param name="move_base/xy_goal_tolerance"               value="0.30"/>
+  <param name="move_base/yaw_goal_tolerance"              value="0.5"/>
+
+  <!-- Otomatik lokalizasyon:-->
+  <node pkg="service_robot_mission" type="auto_localize.py"
+        name="auto_localizer" output="screen">
+    <param name="cov_threshold" value="1.5"/>
+    <param name="spin_speed"    value="0.4"/>
+    <param name="max_wait"      value="60.0"/>
+  </node>
+
+  <!-- RViz-->
+  <group if="$(arg open_rviz)">
+    <node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find turtlebot3_navigation)/rviz/turtlebot3_navigation.rviz"/>
+  </group>
+</launch>

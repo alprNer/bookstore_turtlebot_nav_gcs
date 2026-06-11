@@ -1,0 +1,41 @@
+locations:
+  - DANISMA
+  - OKUMA
+  - ROMAN
+  - TEKNOLOJI
+
+DANISMA:
+  goal:
+    x: -0.600107
+    y:  4.994618
+    yaw: 0.009266
+  qr_expected: "LOCATION=DANISMA"
+  timeout: 90
+
+OKUMA:
+  goal:
+    x:  6.296783
+    y:  1.646350
+    yaw: 1.583929
+  qr_expected: "LOCATION=OKUMA"
+  timeout: 90
+
+ROMAN:
+  goal:
+    x: -4.635480
+    y: -3.752649
+    yaw: -1.600476
+  qr_expected: "LOCATION=ROMAN"
+  timeout: 90
+
+TEKNOLOJI:
+  goal:
+    x: -0.691453
+    y: -1.655291
+    yaw: -1.574930
+  qr_expected: "LOCATION=TEKNOLOJI"
+  timeout: 90
+
+navigation_retries: 1
+qr_retries: 2
+qr_scan_timeout: 10.0
