@@ -135,7 +135,7 @@ mkdir -p ~/service_robot/src
 cd ~/service_robot/src
 
 # 2. Repoyu klonla
-git clone https://github.com/KULLANICI_ADIN/bookstore_turtlebot_nav_gcs.git service_robot_mission
+git clone https://github.com/alprNer/bookstore_turtlebot_nav_gcs.git service_robot_mission
 
 # 3. AWS Bookstore World'ü klonla (ayrı workspace'e)
 mkdir -p ~/service_robot_ws/src && cd ~/service_robot_ws/src
