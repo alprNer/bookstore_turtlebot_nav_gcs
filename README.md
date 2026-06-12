@@ -43,7 +43,7 @@
 
 ### Proje Hakkında
 
-Bu proje, **KTÜN Robotiğe Giriş Dersi** final ödevi kapsamında geliştirilmiştir. **AWS RoboMaker Bookstore World** simülasyon ortamında **TurtleBot3 Waffle Pi** robot platformu üzerinde çalışan tam otonom bir servis robotu sistemidir.
+Bu proje,**AWS RoboMaker Bookstore World** simülasyon ortamında **TurtleBot3 Waffle Pi** robot platformu üzerinde çalışan tam otonom bir servis robotu sistemidir.
 
 Robot; haritayı kendisi oluşturur, konumunu AMCL ile belirler, belirlenen 4 göreve noktasını sırayla ziyaret eder, her noktada QR kodu okuyup doğrular ve görev sonunda detaylı bir rapor oluşturur. Tüm süreç web tabanlı Yer Kontrol İstasyonu (GCS) üzerinden izlenip yönetilebilir.
 
@@ -261,7 +261,7 @@ service_robot_mission/
 <div align="center">
 
 **Alperen ER**  
-RACLAB — KTÜN Robotiğe Giriş Dersi Final Projesi
+RACLAB
 
 </div>
 
@@ -290,7 +290,7 @@ RACLAB — KTÜN Robotiğe Giriş Dersi Final Projesi
 
 ### About
 
-This project was developed as a final assignment for the **KTÜN Introduction to Robotics** course. It implements a fully autonomous service robot running on **TurtleBot3 Waffle Pi** inside the **AWS RoboMaker Bookstore World** simulation environment.
+This project implements a fully autonomous service robot running on **TurtleBot3 Waffle Pi** inside the **AWS RoboMaker Bookstore World** simulation environment.
 
 The robot autonomously builds a map, localizes itself via AMCL, navigates to 4 mission waypoints in sequence, reads and verifies QR codes at each location, and generates a detailed mission report. The entire process can be monitored and controlled through a web-based Ground Control Station (GCS).
 
@@ -453,6 +453,5 @@ service_robot_mission/
 <div align="center">
 
 **Alperen ER** — RACLAB  
-*KTÜN Introduction to Robotics — Final Project*
 
 </div>
